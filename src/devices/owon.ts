@@ -903,28 +903,55 @@ export const definitions: DefinitionWithExtend[] = [
         extend: [m.onOff(), m.electricityMeter({cluster: "metering"})],
     },
     {
+        fingerprint: [
+            {
+                modelID: "PIR313",
+                manufacturerName: "OWON",
+                endpoints: [
+                    {
+                        ID: 2,
+                        profileID: 260,
+                        deviceID: 262,
+                        inputClusters: [1, 0, 3, 1024],
+                        outputClusters: [3],
+                    },
+                ],
+            },
+        ],
+        model: "PIR313-L",
+        vendor: "OWON",
+        description: "Light sensor",
+        extend: [
+            m.illuminance({
+                reporting: {min: 300, max: 3600, change: 100},
+            }),
+        ],
+    },
+    {
         zigbeeModel: ["PIR313-E", "PIR313"],
         model: "PIR313-E",
         vendor: "OWON",
         description: "Motion sensor",
         fromZigbee: [fz.battery, fz.ias_occupancy_alarm_1, fz.temperature, fz.humidity, fz.occupancy_timeout],
         toZigbee: [],
-        exposes: [e.occupancy(), e.tamper(), e.battery_low(), e.temperature(), e.humidity()],
+        exposes: [e.occupancy(), e.tamper(), e.battery_low(), e.battery(), e.temperature(), e.humidity()],
         configure: async (device, coordinatorEndpoint) => {
+            const endpoint1 = device.getEndpoint(1);
             const endpoint2 = device.getEndpoint(2);
             const endpoint3 = device.getEndpoint(3);
-            if (device.modelID === "PIR313") {
-                await reporting.bind(endpoint3, coordinatorEndpoint, ["msTemperatureMeasurement", "msRelativeHumidity"]);
-            } else {
-                await reporting.bind(endpoint2, coordinatorEndpoint, ["msTemperatureMeasurement", "msRelativeHumidity"]);
-            }
+            await reporting.bind(endpoint1, coordinatorEndpoint, ["genPowerCfg"]);
+            await reporting.batteryPercentageRemaining(endpoint1, {min: 3600, max: 65000, change: 10});
+            const measurementEndpoint = device.modelID === "PIR313" ? endpoint3 : endpoint2;
+            await reporting.bind(measurementEndpoint, coordinatorEndpoint, ["msTemperatureMeasurement", "msRelativeHumidity"]);
+            await reporting.temperature(measurementEndpoint, {min: 60, max: 3600, change: 50});
+            await reporting.humidity(measurementEndpoint, {min: 60, max: 3600, change: 100});
             device.powerSource = "Battery";
             device.save();
         },
-        extend: [m.illuminance()],
+        extend: [m.illuminance({reporting: {min: 300, max: 3600, change: 100}})],
     },
     {
-        zigbeeModel: ["AC201"],
+        zigbeeModel: ["AC201", "AC201P_019E"],
         model: "AC201",
         vendor: "OWON",
         description: "HVAC controller/IR blaster",
@@ -960,7 +987,7 @@ export const definitions: DefinitionWithExtend[] = [
         },
     },
     {
-        zigbeeModel: ["AC221"],
+        zigbeeModel: ["AC221", "AC221_019E"],
         model: "AC221",
         vendor: "OWON",
         description: "AC controller / IR blaster",
@@ -1001,7 +1028,7 @@ export const definitions: DefinitionWithExtend[] = [
 
         configure: async (device, coordinatorEndpoint) => {
             const endpoint = device.getEndpoint(1);
-            const binds = ["genBasic", "genIdentify", "genTime", "hvacThermostat", "hvacFanCtrl"];
+            const binds = ["hvacThermostat", "hvacFanCtrl"];
 
             await reporting.bind(endpoint, coordinatorEndpoint, binds);
 
@@ -1222,7 +1249,7 @@ export const definitions: DefinitionWithExtend[] = [
         },
     },
     {
-        zigbeeModel: ["PIR323-PTH"],
+        zigbeeModel: ["PIR323-PTH", "PIR323-PTH-20"],
         model: "PIR323-PTH",
         vendor: "OWON",
         description: "Multi-sensor",
@@ -1264,11 +1291,12 @@ export const definitions: DefinitionWithExtend[] = [
         extend: [m.battery(), m.iasZoneAlarm({zoneType: "occupancy", zoneAttributes: ["alarm_1", "battery_low", "tamper"]})],
     },
     {
-        zigbeeModel: ["DWS312"],
+        zigbeeModel: ["DWS312", "DWS332-E"],
         model: "DWS312",
         vendor: "OWON",
         description: "Door/window sensor",
         extend: [m.battery(), m.iasZoneAlarm({zoneType: "contact", zoneAttributes: ["alarm_1", "battery_low", "tamper"]})],
+        whiteLabel: [{vendor: "OWON", model: "DWS332-E", description: "Door/window sensor"}],
     },
     {
         zigbeeModel: ["SPM915"],
@@ -1304,6 +1332,34 @@ export const definitions: DefinitionWithExtend[] = [
         },
     },
     {
+        zigbeeModel: ["SLC611"],
+        model: "SLC611",
+        vendor: "OWON",
+        description: "Zigbee smart switch with power metering",
+        extend: [
+            m.onOff(),
+            m.electricityMeter({
+                powerFactor: true,
+                power: {
+                    cluster: "metering",
+                    divisor: 1,
+                    multiplier: 1,
+                },
+                voltage: {
+                    divisor: 10,
+                    multiplier: 1,
+                },
+                current: {
+                    divisor: 1000,
+                    multiplier: 1,
+                },
+            }),
+            m.forcePowerSource({
+                powerSource: "Mains (single phase)",
+            }),
+        ],
+    },
+    {
         zigbeeModel: ["SLC631"],
         model: "SLC631",
         vendor: "OWON",
@@ -1331,5 +1387,38 @@ export const definitions: DefinitionWithExtend[] = [
                 });
             }
         },
+    },
+    {
+        zigbeeModel: ["OCP305", "OCP_305"],
+        model: "OPS305",
+        vendor: "OWON",
+        description: "Ceiling mounted Zigbee presence sensor",
+        extend: [m.occupancy()],
+    },
+    {
+        zigbeeModel: ["WLS316"],
+        model: "WLS316",
+        vendor: "OWON",
+        description: "Water leak sensor",
+        extend: [
+            m.iasZoneAlarm({
+                zoneType: "water_leak",
+                zoneAttributes: ["alarm_1", "battery_low"],
+            }),
+            m.forcePowerSource({powerSource: "Battery"}),
+        ],
+    },
+    {
+        zigbeeModel: ["PB206"],
+        model: "PB206",
+        vendor: "OWON",
+        description: "Panic button",
+        extend: [
+            m.iasZoneAlarm({
+                zoneType: "sos",
+                zoneAttributes: ["alarm_1", "battery_low"],
+            }),
+            m.forcePowerSource({powerSource: "Battery"}),
+        ],
     },
 ];

@@ -18,8 +18,13 @@ export interface NamronHvacThermostat {
         windowOpenCheck2: number;
         hysterersis: number;
         windowOpen: number;
+        adaptiveFunction: number;
         alarmAirTempOverValue: number;
         awayModeSet: number;
+        pidKp: number;
+        pidKd: number;
+        pidKi: number;
+        controlMethod: number;
         windowOpenCheck: boolean;
         antiFrost: boolean;
         windowState: boolean;
@@ -199,6 +204,18 @@ export const fromZigbee = {
             return result;
         },
     } satisfies Fz.Converter<"hvacThermostat", NamronHvacThermostat2, ["attributeReport", "readResponse"]>,
+    namron_hvac_user_interface: {
+        cluster: "hvacUserInterfaceCfg",
+        type: ["attributeReport", "readResponse"],
+        convert: (model, msg, publish, options, meta) => {
+            const result: KeyValueAny = {};
+            if (msg.data.keypadLockout !== undefined) {
+                // Set as child lock instead as keypadlockout
+                result.child_lock = msg.data.keypadLockout === 0 ? "UNLOCK" : "LOCK";
+            }
+            return result;
+        },
+    } satisfies Fz.Converter<"hvacUserInterfaceCfg", undefined, ["attributeReport", "readResponse"]>,
 };
 
 export const toZigbee = {
@@ -385,6 +402,17 @@ export const toZigbee = {
                 default: // Unknown key
                     throw new Error(`Unhandled key toZigbee.namron_thermostat.convertGet ${key}`);
             }
+        },
+    } satisfies Tz.Converter,
+    namron_thermostat_child_lock: {
+        key: ["child_lock"],
+        convertSet: async (entity, key, value, meta) => {
+            const keypadLockout = Number(value === "LOCK");
+            await entity.write("hvacUserInterfaceCfg", {keypadLockout});
+            return {state: {child_lock: value}};
+        },
+        convertGet: async (entity, key, meta) => {
+            await entity.read("hvacUserInterfaceCfg", ["keypadLockout"]);
         },
     } satisfies Tz.Converter,
 };
@@ -792,6 +820,13 @@ export const namronExtend = {
                     manufacturerCode: Zcl.ManufacturerCode.SHENZHEN_SUNRICHER_TECHNOLOGY_LTD,
                     write: true,
                 },
+                adaptiveFunction: {
+                    name: "adaptiveFunction",
+                    ID: 0x100c,
+                    type: Zcl.DataType.ENUM8,
+                    manufacturerCode: Zcl.ManufacturerCode.SHENZHEN_SUNRICHER_TECHNOLOGY_LTD,
+                    write: true,
+                },
                 alarmAirTempOverValue: {
                     name: "alarmAirTempOverValue",
                     ID: 0x2001,
@@ -806,25 +841,50 @@ export const namronExtend = {
                     manufacturerCode: Zcl.ManufacturerCode.SHENZHEN_SUNRICHER_TECHNOLOGY_LTD,
                     write: true,
                 },
+                pidKp: {
+                    name: "pidKp",
+                    ID: 0x2006,
+                    type: Zcl.DataType.UINT16,
+                    manufacturerCode: Zcl.ManufacturerCode.SHENZHEN_SUNRICHER_TECHNOLOGY_LTD,
+                    write: true,
+                },
+                pidKd: {
+                    name: "pidKd",
+                    ID: 0x2007,
+                    type: Zcl.DataType.UINT16,
+                    manufacturerCode: Zcl.ManufacturerCode.SHENZHEN_SUNRICHER_TECHNOLOGY_LTD,
+                    write: true,
+                },
+                pidKi: {
+                    name: "pidKi",
+                    ID: 0x2008,
+                    type: Zcl.DataType.UINT16,
+                    manufacturerCode: Zcl.ManufacturerCode.SHENZHEN_SUNRICHER_TECHNOLOGY_LTD,
+                    write: true,
+                },
+                controlMethod: {
+                    name: "controlMethod",
+                    ID: 0x2009,
+                    type: Zcl.DataType.ENUM8,
+                    manufacturerCode: Zcl.ManufacturerCode.SHENZHEN_SUNRICHER_TECHNOLOGY_LTD,
+                    write: true,
+                },
                 windowOpenCheck: {
                     name: "windowOpenCheck",
                     ID: 0x8000,
                     type: Zcl.DataType.BOOLEAN,
                     write: true,
-                    manufacturerCode: Zcl.ManufacturerCode.SHENZHEN_SUNRICHER_TECHNOLOGY_LTD,
                 },
                 antiFrost: {
                     name: "antiFrost",
                     ID: 0x8001,
                     type: Zcl.DataType.BOOLEAN,
                     write: true,
-                    manufacturerCode: Zcl.ManufacturerCode.SHENZHEN_SUNRICHER_TECHNOLOGY_LTD,
                 },
                 windowState: {
                     name: "windowState",
                     ID: 0x8002,
                     type: Zcl.DataType.BOOLEAN,
-                    manufacturerCode: Zcl.ManufacturerCode.SHENZHEN_SUNRICHER_TECHNOLOGY_LTD,
                 },
                 workDays: {
                     name: "workDays",
@@ -837,7 +897,6 @@ export const namronExtend = {
                     ID: 0x8004,
                     type: Zcl.DataType.ENUM8,
                     write: true,
-                    manufacturerCode: Zcl.ManufacturerCode.SHENZHEN_SUNRICHER_TECHNOLOGY_LTD,
                 },
                 displayActiveBacklight: {
                     name: "displayActiveBacklight",

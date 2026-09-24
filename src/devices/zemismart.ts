@@ -862,6 +862,7 @@ export const definitions: DefinitionWithExtend[] = [
             "_TZE28C1000000_xibaabmu",
             "_TZE204_08qc13ct",
             "_TZE28C1000000_y4jqpry8",
+            "_TZE28C1000000_pmbxyf97",
         ]),
         model: "ZMS-206US-4",
         vendor: "Zemismart",
@@ -1285,17 +1286,6 @@ export const definitions: DefinitionWithExtend[] = [
                 [112, null, {from: () => undefined}], // unknown datapoint — suppress "not defined" warning
                 [113, null, {from: () => undefined}], // unknown datapoint — suppress "not defined" warning
             ],
-        },
-    },
-    {
-        fingerprint: tuya.fingerprint("TS0601", ["_TZE28C1000000_rzdkn5rx"]),
-        model: "ZNS-LRL2E",
-        vendor: "Zemismart",
-        description: "30A immersion switch",
-        extend: [tuya.modernExtend.tuyaBase({dp: true})],
-        exposes: [e.switch()],
-        meta: {
-            tuyaDatapoints: [[1, "state", tuya.valueConverter.onOff]],
         },
     },
 ];
